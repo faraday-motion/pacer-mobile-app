@@ -3,18 +3,11 @@ export default class Console {
     this.transport = transport;
   }
 
-  sendCommand(command) {
+  sendCommand(command, payload = "") {
     return new Promise((resolve, reject) => {
-      // setTimeout(() => {
-      //   resolve(`response for ${command}`);
-      // }, 200);
-      try{
-      this.transport.send({
-        roll: command,
-        });
-      } catch (ex) {
-        console.log(ex);
-      }
+      this.transport.send(command, payload, (data) => {
+        resolve(data);
+      })
     });
   }
 }

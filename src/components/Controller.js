@@ -47,8 +47,8 @@ export default class Go extends Component {
 
 const styles = {
   base: {
-    height: 200,
-    width: 200,
+    height: '60%',
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -56,10 +56,11 @@ const styles = {
     backgroundColor: 'green',
   },
   release: {
-    backgroundColor: 'yellow',
+    backgroundColor: 'red',
   },
   text: {
     fontWeight: 'bold',
     fontSize: 30,
+    color: 'white'
   },
 };

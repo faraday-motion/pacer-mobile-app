@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Text } from 'react-native';
+import { View,Text } from 'react-native';
 import PropTypes from 'prop-types';
 import { BehaviorSubject } from 'rxjs/Rx';
 
@@ -43,7 +43,12 @@ export default class ConnectionToast extends Component {
 
     switch (transportState) {
       case TransportState.CONNECTING:
-        return <Text>Connecting...</Text>;
+        return (
+            <View>
+            <Text style={{textAlign:'center', fontWeight:'bold'}}>Connecting...</Text>
+            <Text style={{textAlign:'center', marginTop:4}}>Are you on the right Wi-Fi network?</Text>
+            </View>
+          );
       case TransportState.DISCONNECTED:
         return <Text>Disconnected</Text>;
       default:

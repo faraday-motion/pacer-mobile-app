@@ -10,13 +10,16 @@ import {
 } from './src/packages/fm-board';
 
 import Main from './src/containers/Main';
+import Drive from './src/containers/Drive';
 import About from './src/containers/About';
 import Settings from './src/containers/Settings';
 import Console from './src/containers/Console';
 import ConnectionToast from './src/containers/TransportState';
 
 const ACCELEROMETER_UPDATE_INTERVAL = 10; // ms
+// const WS_URL = 'ws://echo.websocket.org';
 const WS_URL = 'ws://10.10.100.254:81';
+
 
 export default class App extends Component {
   constructor(props) {
@@ -43,10 +46,20 @@ export default class App extends Component {
       Main: {
         screen: screenProps => (<Main
           {...screenProps}
-          motionController={motionController}
+          connectionToast={this.connectionToast}
+          transport={transport}
         />),
         navigationOptions: () => ({
           header: null,
+        }),
+      },      
+      Drive: {
+        screen: screenProps => (<Drive
+          {...screenProps}
+          motionController={motionController}
+        />),
+        navigationOptions: () => ({
+          title: 'Drive',
         }),
       },
       About: {
@@ -59,6 +72,8 @@ export default class App extends Component {
         screen: screenProps => (<Settings
           {...screenProps}
           settingsController={settingsController}
+          connectionToast={this.connectionToast}
+          transport={transport}
         />),
         navigationOptions: () => ({
           title: 'Settings',
@@ -77,11 +92,15 @@ export default class App extends Component {
   }
 
   render() {
-    return [
-      React.createElement(this.nav, {
+    // return [
+    //   React.createElement(this.nav, {
+    //     key: 'nav',
+    //   }),
+    //   this.connectionToast,
+    // ];    
+
+    return React.createElement(this.nav, {
         key: 'nav',
-      }),
-      this.connectionToast,
-    ];
+      });
   }
 }

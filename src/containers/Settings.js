@@ -3,14 +3,18 @@ import { Button, Text, View, ScrollView, StyleSheet } from 'react-native';
 import PropTypes from 'prop-types';
 
 import { SettingsController } from '../packages/fm-board';
+import { BehaviorSubject } from 'rxjs/Rx';
 
 import { Form,
   Separator,InputField, LinkField,
-  SwitchField, PickerField,DatePickerField,TimePickerField
+  SwitchField, PickerField,DatePickerField
 } from 'react-native-form-generator';
 
 export default class Settings extends Component {
   static propTypes = {
+    transport: PropTypes.shape({
+      state$: PropTypes.instanceOf(BehaviorSubject).isRequired,
+    }).isRequired, 
     settingsController: PropTypes.instanceOf(SettingsController).isRequired,
     navigation: PropTypes.shape({
       navigate: PropTypes.func.isRequired,
@@ -23,29 +27,49 @@ export default class Settings extends Component {
     this.state = {
       settings: null,
       saving: false,
+      transportState: null,
     };
   }
 
   componentDidMount() {
     this.mounted = true;
+    const {transport} = this.props;
+    this.transportStateSub = transport.state$.subscribe(this.onTransportStateChange);
 
-    this.props.settingsController
-      .getSettings()
-      .then((settings) => {
-        if (this.mounted) {
-          //this.setState({ settings });
-          this.setState({ settings: defaultSettings }); // TODO:: delete this.
-          this.initSettingsForm();
-        }
-      });
+    if (this.state.transportState === 1) {
+      this.getSettings(); 
+    } 
   }
 
   componentWillUnmount() {
     this.mounted = false;
+    this.transportStateSub.unsubscribe();
+  }
+
+  onTransportStateChange = (transportState) => {
+    this.setState({
+      transportState,
+    });
+
+    if (transportState === 1) {
+      this.getSettings();
+    }
+  }
+
+  getSettings() {
+   this.props.settingsController
+    .getSettings()
+    .then((settings) => {
+      if (this.mounted) {
+        this.setState({ settings: settings });
+        this.initSettingsForm();            
+      }
+    });
   }
 
   onSave = () => {
     this.setState({ saving: true });
+    this.serializeSettings();
 
     this.props.settingsController
       .saveSettings(this.state.settings)
@@ -54,11 +78,32 @@ export default class Settings extends Component {
       });
   };
 
+  serializeSettings() {
+    let settings = this.state.settings;
+    let formData = this.state.formData;
+    settings.wifi.ssid = formData.wifi_ssid;
+    settings.wifi.pass = formData.wifi_pass;
+    settings.wifi.ip = formData.wifi_ip.split('.');
+    settings.wifi.subnet = formData.wifi_subnet.split('.');
+
+    settings.motorCount = parseInt(formData.motorCount);
+    settings.modules.radio = formData.radioModule * 1; // js hack to convert bool to int
+    settings.modules.webSocketServer = formData.webSocketModule * 1; // js hack to convert bool to int
+    settings.modules.webServer = formData.webServerModule * 1; // js hack to convert bool to int
+    
+    settings.authorizedControllers = []; // Clear all
+    if (formData.wifiCtrl) settings.authorizedControllers.push(1);
+    if (formData.radioCtrl) settings.authorizedControllers.push(2);
+    if (formData.i2cCtrl) settings.authorizedControllers.push(3);
+    if (formData.analogCtrl) settings.authorizedControllers.push(4);
+    if (formData.websocketCtrl) settings.authorizedControllers.push(5);
+    this.setState({settings: settings});
+  }
+
   onConsoleBtnPress = () => {
     const { navigation } = this.props;
-
     navigation.navigate('Console');
-  };
+  };  
 
   handleFormChange(formData){
     this.setState({formData:formData})
@@ -73,7 +118,7 @@ export default class Settings extends Component {
     
     // Modules
     formData.webServerModule.setValue(Boolean(settings.modules.webServer));
-    formData.webSocketrModule.setValue(Boolean(settings.modules.webSocketServer));
+    formData.webSocketModule.setValue(Boolean(settings.modules.webSocketServer));
     formData.radioModule.setValue(Boolean(settings.modules.radio));
     
     // Authorized Controllers 
@@ -94,24 +139,25 @@ export default class Settings extends Component {
   }
 
   renderSettings() {
-    if (this.state.settings === null) {
-      return (<Text>Loading current settings</Text>);
+    if (this.state.settings === null && this.state.transportState === 1) {
+      return (<Text style={{textAlign:'center', marginTop:20}}>Loading current settings</Text>);
+    }
+
+    if (this.state.transportState !== 1) {
+      return (<Text style={{textAlign:'center', marginTop:20}}>Cannot get Settings. Connect to vehicle.</Text>);
     }
 
     return (
       <View style={{flex:2}} >
-
-      
       <ScrollView keyboardShouldPersistTaps="always" style={{paddingLeft:10,paddingRight:10}}>
+        <View style={{marginTop:32}}>
+          <Button title="Open Console" onPress={this.onConsoleBtnPress} style={{marginTop:24,marginBottom:24}} />
+        </View>
         <Form
           ref='settingsForm'
           style={{marginBottom:24}}
           onChange={this.handleFormChange.bind(this)}
-          label="Faraday Motion Vehicle Settings">
-
-          <Text style={styles.formHeader}>Vehicle Console</Text>
-          <Button title="Open Console" onPress={this.onConsoleBtnPress} style={{marginTop:24,marginBottom:24}} />
-          <Text style={styles.helpText}>Only use if you know what you're doing.</Text>          
+          label="Faraday Motion Vehicle Settings">         
           
           <Text style={styles.formHeader}>Vehicle </Text>
           <Text style={styles.formLabel}>Motor Count </Text>
@@ -130,9 +176,9 @@ export default class Settings extends Component {
           <Text style={styles.helpText}>Controllers that use the analog pins (e.g. wired joystick/ sensor pads)</Text>
 
           <Text style={styles.formHeader}>Modules</Text>
-          <SwitchField containerStyle={ styles.switchContainer } labelStyle={ styles.switchLabel } label='WebSocket Server'  ref="webServerModule"/>
+          <SwitchField containerStyle={ styles.switchContainer } labelStyle={ styles.switchLabel } label='WebServer'  ref="webServerModule"/>
           <Text style={styles.helpText}>Required for remote configuration and logging. Also used by the mobile application for controlling the vehicle.</Text>          
-          <SwitchField containerStyle={ styles.switchContainer } labelStyle={ styles.switchLabel } label='WebServer'  ref="webSocketrModule"/>
+          <SwitchField containerStyle={ styles.switchContainer } labelStyle={ styles.switchLabel } label='WebSocket Server'  ref="webSocketModule"/>
           <Text style={styles.helpText}>Serves web page that allows you to remotely configure and update firmware.</Text>
           <SwitchField containerStyle={ styles.switchContainer } labelStyle={ styles.switchLabel } label='Radio RF24'  ref="radioModule"/>
           <Text style={styles.helpText}>Used for the Faraday Motion Remote Controller (Nunchuck).</Text>          
@@ -150,6 +196,9 @@ export default class Settings extends Component {
           <Text style={styles.formLabel}>Channel</Text>
           <InputField ref='wifi_channel' />
         </Form>
+        <View style={{marginBottom:32}}>
+          <Button title="Save Settings" onPress={this.onSave} disabled={this.state.saving || this.state.settings === null} />
+        </View>
       </ScrollView>
       </View>
     );
@@ -157,12 +206,13 @@ export default class Settings extends Component {
 
 
   render() {
-    return (
-      <View style={{ flex:1 }}>
-        {this.renderSettings()}
-        <Button title="Save" style={{height:100}} onPress={this.onSave} disabled={this.state.saving || this.state.settings === null} />
+    return [(
+      <View key='settings' style={{ flex:1 }}>
+        {this.renderSettings()}        
       </View>
-    );
+    ), 
+    this.props.connectionToast
+    ];
   }
 }
 
@@ -202,3 +252,67 @@ const styles = StyleSheet.create({
 });
 
 
+const defaultSettings = {
+  "modules" : {
+    "radio" : 0,
+    "webSocketServer" : 1,
+    "webServer" : 1
+  },
+
+  "wifi" : {
+    "ssid"     : "FARADAY200",
+    "port"     : 8899,
+    "ip"       : [10, 10, 100, 254],
+    "subnet"   : [255, 255, 255, 0],
+    "channel"  : 11,
+    "pass"     : "faraday200"
+  },
+
+  "websocket" : {
+    "port" : 81
+  },
+
+  "controller" : {
+    "defaultSmoothAlpha"          : 0.5 ,
+    "defaultInputNeutral"         : 50  ,
+    "defaultInputMinBrake"        : 48  ,
+    "defaultInputMaxBrake"        : 0   ,
+    "defaultInputMinAcceleration" : 52  ,
+    "defaultInputMaxAcceleration" : 100
+  },
+
+  "currentControl" : {
+    "defaultCurrentNeutral"         : 0   ,
+    "defaultCurrentBrakeMin"        : 0   ,
+    "defaultCurrentBrakeMax"        : 60  ,
+    "defaultCurrentAccelerationMin" : 0.25,
+    "defaultCurrentAccelerationMax" : 30
+  },
+
+  "motorCount" : 1,
+
+  "authorizedControllers" : [1, 2, 3, 4, 5],
+
+  "registeredControllers" : [
+    {
+      "id" : "ACCE1",
+      "type" : 3,
+      "priority" : 1,
+      "enabled" : 0,
+      "constraints" : {
+        "brake" : 200,
+        "accel" : 650
+      }
+    },
+    {
+      "id" : "JOYS1",
+      "type" : 4,
+      "priority" : 1,
+      "enabled" : 0,
+      "constraints" : {
+        "brake" : 190,
+        "accel" : 840
+      }
+    }
+  ]
+};
