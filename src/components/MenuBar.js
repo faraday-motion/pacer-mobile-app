@@ -21,10 +21,10 @@ export default class MenuBar extends Component {
   };
 
 
-  onSettingsBtnPress = () => {
+  onLiveStatsPress = () => {
     const { navigation } = this.props;
 
-    navigation.navigate('Settings');
+    navigation.navigate('LiveStats');
   };
 
   render() {
@@ -36,8 +36,8 @@ export default class MenuBar extends Component {
           </TouchableOpacity>
         </View>
         <View style={{flex:1}}>
-          <TouchableOpacity style={styles.menuBtn} onPress={this.onSettingsBtnPress}> 
-            <Text style={styles.btnText}>Settings</Text>
+          <TouchableOpacity style={styles.menuBtn} onPress={this.onLiveStatsPress}> 
+            <Text style={styles.btnText}>Live Stats</Text>
           </TouchableOpacity>
         </View>
       </View>

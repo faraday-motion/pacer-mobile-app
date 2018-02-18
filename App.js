@@ -5,14 +5,13 @@ import { Accelerometer } from 'react-native-sensors';
 import {
   Console as BoardConsole,
   MotionController,
-  SettingsController,
   Transport,
 } from './src/packages/fm-board';
 
 import Main from './src/containers/Main';
 import Drive from './src/containers/Drive';
 import About from './src/containers/About';
-import Settings from './src/containers/Settings';
+import LiveStats from './src/containers/LiveStats';
 import Console from './src/containers/Console';
 import ConnectionToast from './src/containers/TransportState';
 
@@ -31,7 +30,6 @@ export default class App extends Component {
 
     const transport = new Transport(WS_URL);
     const motionController = new MotionController(accelerometer, transport);
-    const settingsController = new SettingsController(transport);
     const boardConsole = new BoardConsole(transport);
 
     transport.message$.retry().subscribe((x) => {
@@ -67,16 +65,14 @@ export default class App extends Component {
         navigationOptions: () => ({
           title: 'About',
         }),
-      },
-      Settings: {
-        screen: screenProps => (<Settings
+      },      
+      LiveStats: {
+        screen: screenProps => (<LiveStats
           {...screenProps}
-          settingsController={settingsController}
-          connectionToast={this.connectionToast}
           transport={transport}
         />),
         navigationOptions: () => ({
-          title: 'Settings',
+          title: 'Live Stats',
         }),
       },
       Console: {

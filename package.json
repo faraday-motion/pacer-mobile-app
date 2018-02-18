@@ -10,21 +10,23 @@
   "dependencies": {
     "prop-types": "15.6.0",
     "react": "16.0.0",
-    "react-native": "0.49.3",
+    "react-native": "^0.53.0",
     "react-native-form-generator": "^0.9.9",
     "react-native-sensors": "2.4.1",
+    "react-native-svg": "^6.2.1",
+    "react-native-svg-charts": "^2.2.3",
     "react-navigation": "1.0.0-beta.15",
     "rxjs": "5.5.0"
   },
   "devDependencies": {
-    "babel-eslint": "^8.0.1",
+    "babel-eslint": "^8.2.1",
     "babel-jest": "21.2.0",
     "babel-preset-react-native": "4.0.0",
-    "eslint": "^4.9.0",
+    "eslint": "^4.17.0",
     "eslint-config-airbnb": "^16.1.0",
     "eslint-plugin-import": "^2.8.0",
-    "eslint-plugin-jsx-a11y": "^6.0.2",
-    "eslint-plugin-react": "^7.4.0",
+    "eslint-plugin-jsx-a11y": "^6.0.3",
+    "eslint-plugin-react": "^7.6.1",
     "jest": "21.2.1",
     "react-test-renderer": "16.0.0-beta.5"
   },

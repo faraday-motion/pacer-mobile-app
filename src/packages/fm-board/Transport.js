@@ -9,28 +9,30 @@ export default class Transport {
 
     this.state$ = new BehaviorSubject(State.CONNECTING);
     this.message$ = new Subject();
+    // This should be done differently.
+    this.driveLog$ = new BehaviorSubject({});
+
+
     this.forceClosed = false;
     this.callback_queue_seq = 0;
     this.callback_queue = {};
     this.connect();
 
     this.COMMAND = {
-      LOGGER_ENABLE:       8001,
-      LOGGER_DISABLE:      8002,
-      LOGGER_ADD_TARGET:   8003,
-      LOGGER_REMOVE_TARGET:8004,
-      LOGGER_SET_LEVEL:    8005,
-
-      CONFIG_GET:          8006,
-      CONFIG_SET:          8007,
-
-      CTRL_GET_ACTIVE:     8008,
-      CTRL_SET_ACTIVE:     8009,
-      CTRL_UNSET_ACTIVE:   8010,
-      CTRL_GET_ALL:        8011,
-      CTRL_REGISTER:       8012,
-      CTRL_SENT_INPUT:     8013
+      MODULE_ON           : 0,
+      MODULE_OFF          : 1,
+      DISABLE_CONTROLLERS : 2,
+      ENABLE_CONTROLLER   : 3,
+      DRIVE_POWER         : 4,
+      DRIVE_BRAKE         : 5,
+      TURN_LEFT           : 6,
+      TURN_RIGHT          : 7,
+      DRIVE_MODE_20       : 8,
+      DRIVE_MODE_40       : 9,
+      DRIVE_MODE_60       : 10,
+      DRIVE_MODE_80       : 11
     }
+
   }
 
   connect() {
@@ -41,17 +43,27 @@ export default class Transport {
     this.forceClosed = false;
     this.state$.next(State.CONNECTING);
     this.ws = new WebSocket(this.url);
-    // this.ws.onmessage = this.message$.next.bind(this.message$);
+
     this.ws.onmessage = ((event) => {
+      var message = JSON.parse(event.data)
+      if (message.id != undefined) {
+        let callbackId = parseInt(message.id);
+        var callback = this.callback_queue[callbackId].callback;
+        delete this.callback_queue[callbackId];
+        callback(message.response);
 
-      var message =  JSON.parse(event.data)
-      let callbackId = parseInt(message.id);
-      var callback = this.callback_queue[callbackId].callback;
-      delete this.callback_queue[callbackId];
-
-      callback(message.response);
+      }
+      console.log(message.response);
+      if (message.response != undefined) {
+        if (message.response.drive_log != undefined) {
+          console.log("Received drive_log");
+          console.log(message.response.drive_log);
+          this.driveLog$.next(message.response.drive_log);
+        }
+      }
 
     }).bind(this);
+    
     this.ws.onopen = () => {
       this.state$.next(State.CONNECTED);
     };
@@ -76,7 +88,8 @@ export default class Transport {
     this.ws = null;
   }
 
-  send(command, payload, callback) {;
+  send(command, value, callback) {
+    console.log("Sending...");
     if (this.state$.value !== State.CONNECTED) {
       // TODO:: WE NEED TO SHOW ERROR TO USER.
       return;
@@ -89,11 +102,18 @@ export default class Transport {
     var message = {
       'id': this.callback_queue_seq,
       'command': command, 
-      'payload': JSON.stringify(payload)
+      'value': value
     }
     
     this.ws.send(JSON.stringify(message, undefined, 2));
     this.callback_queue_seq++;
+    // Might not be optimal.
+    if (this.callback_queue_seq == 255) {
+      this.callback_queue_seq = 0;
+    }
+
+    console.log("Sent");
+    console.log(message);
   }
 
   assertConnected() {

@@ -9,7 +9,7 @@ Number.prototype.map = function (in_min, in_max, out_min, out_max) {
   return ($this - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-const SYNC_INTERVAL = 10; // ms
+const SYNC_INTERVAL = 50; // ms
 
 export default class MotionController {
   constructor(accelerometer, transport) {
@@ -28,11 +28,6 @@ export default class MotionController {
   start() {
     if (this.loopTimerId !== null) {
       throw new Error(`A loop(${this.loopTimerId}) is already running`);
-    }
-    if (this.state.isRegistered == false) {
-      this.transport.send(this.transport.COMMAND.CTRL_REGISTER, { id: "WBSK1", type: 5 , enabled: 1 }, function(respose) {
-        // handle.
-      }); 
     }
     this.loop();
   }
@@ -53,7 +48,7 @@ export default class MotionController {
   onAccelerometerData = (accelerations) => {
     this.accelerations = accelerations;
   };
-
+ 
   motionStateIsValid() {
     return this.accelerations !== null;
   }
@@ -64,11 +59,29 @@ export default class MotionController {
     }
 
     try {
-      this.transport.send(this.transport.COMMAND.CTRL_SENT_INPUT, {input: MotionController.roll(this.accelerations)}, function(respose) {
+
+      let raw_power = MotionController.roll(this.accelerations);
+      let command = this.transport.COMMAND.DRIVE_BRAKE;
+      let power = 0;
+      
+      if (raw_power > 50) {
+        // Accelerating. 
+        power = parseInt(raw_power.map(50, 100, 0, 100));
+        command = this.transport.COMMAND.DRIVE_POWER;    
+      } else if (raw_power <= 50) {
+        // Braking
+        power = parseInt(raw_power.map(0, 50, 100, 0));
+        command = this.transport.COMMAND.DRIVE_BRAKE;    
+      } 
+
+      this.transport.send(command, power, function(respose) {
         // Handle
-      } );
+      });
+
     } catch (ex) {
       // handle
+      console.log("Drive Control Sync Handle error");
+      console.log(ex);
     }
   }
 
